@@ -1,0 +1,457 @@
+import React, { Component } from "react";
+
+import HeaderPage from "./header.component.js";
+import '../dashboard/dashboard.css';
+import axios from 'axios';
+import LoadingSpinner from './loadingspinner.component.js';
+import image from '../images/lg.rotating-balls-spinner.gif';
+import Modal from 'react-bootstrap/Modal';
+import Button from 'react-bootstrap/Button';
+import jwt_decode from 'jwt-decode';
+import { edituser } from "./UserFunctions";
+
+export default class CreateEmployeePage extends Component {
+    constructor() {
+        super();
+
+        this.state = {
+            show: false,
+            loading: false,
+            newloading: true,
+            department: [],
+            selectedDepartment: "",
+            validationError: "",
+            companyId: "",
+            allemployees: [],
+            edituseremail: "",
+            editusertype: "",
+            editusername: "",
+            edituserempid: "",
+            edituserdoj: "",
+            edituserdepartment: "",
+            edituserdesignation: "",
+            edituserisactive: "",
+            edituserphone: "",
+            message: '',
+        };
+
+        this.handleShow = () => {
+            this.setState({ show: true });
+        };
+
+        this.handleHide = () => {
+            this.setState({ show: false });
+        };
+
+        this.onChange = this.onChange.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+    }
+
+    componentWillMount() {
+        const token = localStorage.usertoken;
+        const decoded = jwt_decode(token);
+        this.setState({
+            companyId: decoded.companyId
+        })
+
+
+    }
+    componentDidMount() {
+        var requestedId = this.props.match.params.id;
+
+
+        var apiUrl = `https://fierce-reef-74150.herokuapp.com/empdetail/${requestedId}`;
+
+        axios.get(apiUrl)
+            .then(response => {
+                return response;
+            }).then(data => {
+                console.log(data.data.empdetail)
+                this.setState({
+                    newloading: false,
+                    edituseremail: data.data.empdetail && data.data.empdetail.email,
+                    editusertype: data.data.empdetail && data.data.empdetail.usertype,
+                    editusername: data.data.empdetail && data.data.empdetail.name,
+                    edituserphone: data.data.empdetail && data.data.empdetail.phone,
+                    edituserempid: data.data.empdetail && data.data.empdetail.employee_id,
+                    edituserdoj: data.data.empdetail && data.data.empdetail.doj,
+                    edituserusername: data.data.empdetail && data.data.empdetail.username,
+                    edituserdesignation: data.data.empdetail && data.data.empdetail.designation,
+                    edituserisactive: data.data.empdetail && data.data.empdetail.isactive
+                })
+            }).catch(error => {
+                console.log(error);
+            });
+
+    }
+
+    onChange(e) {
+        const { name, value } = e.target;
+        this.setState({ [e.target.name]: e.target.value });
+        if ([e.target.name] == "dapartment") {
+            let departmentid = e.target.value;
+            let companyid = this.state.companyId;
+            axios
+                .post("https://fierce-reef-74150.herokuapp.com/getcmpnydeptemployee", {
+                    associatedCompany: companyid,
+                    associatedDept: departmentid
+                })
+                .then(getresponse => {
+                    return getresponse;
+                }).then(data => {
+                    let depempFromApi = data.data.departmentEmployees.map(employee => { return { empid: employee.employee_id, empname: employee.name, empmainid: employee._id } })
+                    this.setState({ allemployees: depempFromApi });
+
+                }).catch(error => {
+                    console.log(error);
+                });
+        }
+
+    }
+
+    onSubmit(e) {
+        var requestedId = this.props.match.params.id;
+
+        this.setState({
+            loading: true,
+        })
+        e.preventDefault();
+        const user = {
+            edituseremail: this.state.edituseremail,
+            editusertype: this.state.editusertype,
+            editusername: this.state.editusername,
+            edituserphone: this.state.edituserphone,
+            edituserempid: this.state.edituserempid,
+            edituserdoj: this.state.edituserdoj,
+            edituserusername: this.state.edituserusername,
+            edituserdesignation: this.state.edituserdesignation,
+            edituserisactive: this.state.edituserisactive,
+            requestedId: requestedId
+        };
+
+        edituser(user).then((res, err) => {
+            var redirectUrl = `https://fierce-reef-74150.herokuapp.com/editemployee/${requestedId}`;
+            if (res) {
+                this.setState({
+                    loading: false,
+                    message: "User updated successfully"
+                })
+                this.props.history.push(redirectUrl);
+            }
+            else {
+                this.setState({
+                    loading: false,
+                    message: "Some error occured"
+                })
+            }
+        });
+
+    }
+
+    render() {
+        const { loading, message, newloading } = this.state;
+
+
+        return (
+            <div className="app sidebar-mini rtl">
+                <HeaderPage />
+                <div className="app-content">
+                    <div className="app-title">
+                        <div>
+                            <h1><i className="fa fa-dashboard"></i> Edit Employee</h1>
+                            {/* <p>A free and open source Bootstrap 4 admin template</p> */}
+                        </div>
+                        <ul className="app-breadcrumb breadcrumb">
+                            <li className="breadcrumb-item"><i className="fa fa-home fa-lg"></i></li>
+                            <li className="breadcrumb-item"><a href="#">Edit Employee</a></li>
+                        </ul>
+                    </div>
+
+                    {/** ------------start data table----------------- */}
+                    <div className="row">
+                        <div className="col-md-12">
+                            {newloading ? <div className="col-md-4 offset-md-4"><img src={image} /></div> :
+                                <div className="tile addemployeeTile">
+                                    {message !== '' && message == 'User updated successfully' &&
+                                        <div class="alert alert-success alert-dismissible" role="alert">
+                                            {message}
+                                            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                                        </div>
+                                    }
+                                    <form onSubmit={this.onSubmit} noValidate>
+
+                                        <div className="input-class-field employeeAdd">
+                                            <div className="row">
+                                                <div className="offset-sm-1 col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="email"><b>Email</b></label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-addon">
+                                                                <span className="glyphicon glyphicon-envelope" />
+                                                            </span>
+                                                            <input
+                                                                type="email"
+                                                                className='form-control'
+                                                                id="edituseremail"
+                                                                name="edituseremail"
+                                                                onChange={this.onChange}
+                                                                placeholder="anyone@example.com"
+                                                                required="required"
+                                                                value={this.state.edituseremail}
+                                                            />
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="editusertype"><b>User Type</b></label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-addon">
+                                                                <span className="glyphicon glyphicon-envelope" />
+                                                            </span>
+                                                            <select name="editusertype" className="form-control" value={this.state.editusertype} onChange={this.onChange}>
+                                                                <option value="">Select</option>
+                                                                <option value="Employee" >Employee</option>
+                                                                <option value="Manager" >Manager</option>
+                                                            </select>
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="row">
+                                                <div className="offset-sm-1 col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="name"><b>Name</b></label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-addon">
+                                                                <span className="glyphicon glyphicon-envelope" />
+                                                            </span>
+                                                            <input
+                                                                type="text"
+                                                                className='form-control'
+                                                                id="editusername"
+                                                                name="editusername"
+                                                                placeholder=""
+                                                                onChange={this.onChange}
+                                                                required="required"
+                                                                value={this.state.editusername}
+                                                            />
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="phone"><b>Phone</b></label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-addon">
+                                                                <span className="glyphicon glyphicon-envelope" />
+                                                            </span>
+                                                            <input
+                                                                type="text"
+                                                                className='form-control'
+                                                                id="edituserphone"
+                                                                name="edituserphone"
+                                                                placeholder=""
+                                                                onChange={this.onChange}
+                                                                required="required"
+                                                                value={this.state.edituserphone}
+                                                            />
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="row">
+                                                <div className="offset-sm-1 col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="employeeid"><b>Employee ID</b></label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-addon">
+                                                                <span className="glyphicon glyphicon-envelope" />
+                                                            </span>
+                                                            <input
+                                                                type="text"
+                                                                className='form-control'
+                                                                id="edituserempid"
+                                                                name="edituserempid"
+                                                                placeholder=""
+                                                                onChange={this.onChange}
+                                                                required="required"
+                                                                value={this.state.edituserempid}
+                                                            />
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="dateofjoining"><b>Date of Joining</b></label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-addon">
+                                                                <span className="glyphicon glyphicon-envelope" />
+                                                            </span>
+                                                            <input
+                                                                type="date"
+                                                                className='form-control'
+                                                                id="edituserdoj"
+                                                                name="edituserdoj"
+                                                                placeholder=""
+                                                                onChange={this.onChange}
+                                                                required="required"
+                                                                value={this.state.edituserdoj}
+                                                            />
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="row">
+                                                <div className="offset-sm-1 col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="department"><b>Username</b></label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-addon">
+                                                                <span className="glyphicon glyphicon-envelope" />
+                                                            </span>
+                                                            <input
+                                                                type="text"
+                                                                className='form-control'
+                                                                id="edituserusername"
+                                                                name="edituserusername"
+                                                                placeholder=""
+                                                                onChange={this.onChange}
+                                                                value={this.state.edituserusername}
+                                                            />
+                                                            <div style={{ color: 'red', marginTop: '5px' }}>
+                                                                {this.state.validationError}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="designation"><b>Designation</b></label>
+                                                        <div className="input-group">
+                                                            <span className="input-group-addon">
+                                                                <span className="glyphicon glyphicon-envelope" />
+                                                            </span>
+                                                            <input
+                                                                type="text"
+                                                                className='form-control'
+                                                                id="edituserdesignation"
+                                                                name="edituserdesignation"
+                                                                placeholder=""
+                                                                required="required"
+                                                                onChange={this.onChange}
+                                                                value={this.state.edituserdesignation}
+                                                            />
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div><br />
+                                            <div className="row">
+                                                <div className="offset-sm-1 col-md-5">
+                                                    <div className="form-group">
+                                                        <label htmlFor="fgh">
+                                                            Is Active ? <input className="" type="checkbox" style={{ marginLeft: '10px' }} name="edituserisactive" checked={this.state.edituserisactive == true ? "checked" : ""} onChange={this.onChange} />
+                                                        </label>
+
+
+
+                                                    </div>
+                                                </div>
+                                                <div className="col-md-5">
+                                                    <div className="form-group">
+                                                        <a variant="primary" style={{ cursor: 'pointer', fontWeight: '700', fontSize: '16px' }}><b>Choose Employee Under Him/Her</b></a>
+
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="row">
+                                                <div className="offset-sm-1 col-md-3">
+                                                    <div className="form-group">
+                                                        <button
+                                                            type="submit"
+                                                            className="btn btn-primary btn-block pull-right"
+                                                            id="btnContactUs"
+                                                        >
+                                                            {loading ? <LoadingSpinner /> : "Update"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                    </form>
+                                </div>
+                            }
+
+
+                        </div>
+                    </div>
+                    {/** ------------end data table----------------- */}
+
+
+                    <Modal
+                        show={this.state.show}
+                        onHide={this.handleHide}
+                        dialogClassName="modal-90w"
+                        aria-labelledby="example-custom-modal-styling-title"
+                        centered
+                        size="lg"
+                    >
+                        <Modal.Header closeButton>
+                            <Modal.Title id="example-custom-modal-styling-title">
+                                Select Employee
+            </Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            <div class="form-group" id="sampleTableForEmployee">
+                                <table className="table table-hover table-bordered" id="sampleTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Employee ID</th>
+                                            <th>Select</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(() => {
+                                            if (this.state.allemployees && this.state.allemployees.length > 0) {
+                                                return (this.state.allemployees.map((employee) => <tr key={employee.empmainid}><td>{employee.empname}</td><td>{employee.empid}</td><td><input className="" type="checkbox" name="allemployyes[]" value={employee.empmainid} /></td></tr>))
+
+
+                                            } else {
+                                                return (
+                                                    <tr><td colSpan="3" className="text-center" style={{ color: 'red', fontSize: '20px' }}>Sorry, There are no employees under the selected department</td></tr>
+                                                )
+                                            }
+                                        })()}
+
+
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="form-group">
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary pull-right"
+                                    id="btnContactUs"
+                                    onClick={this.handleHide}
+                                >
+                                    DONE
+                                                    </button><br /><br />
+
+                            </div>
+                        </Modal.Body>
+                    </Modal>
+                </div >
+            </div >
+        );
+    }
+}
